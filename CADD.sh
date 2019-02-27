@@ -105,7 +105,10 @@ then
 fi
 
 # Temp files
-TMP_FOLDER=$CADD/data/tmp
+if [ ! -z "$TMP_FOLDER" ]
+then
+    TMP_FOLDER=$CADD/data/tmp
+fi
 TMP_PRE=$TMP_FOLDER/$NAME.pre.tsv.gz
 TMP_VCF=$TMP_FOLDER/$NAME.vcf
 TMP_ANNO=$TMP_FOLDER/$NAME.anno.tsv.gz
@@ -130,7 +133,7 @@ then
     cat $INFILE \
     | python $CADD/src/scripts/VCF2vepVCF.py \
     | sort -k1,1 -k2,2n -k3,3 -k4,4 \
-    | uniq > $TMP_VCF 
+    | uniq > $TMP_VCF
 else
     zcat $INFILE \
     | python $CADD/src/scripts/VCF2vepVCF.py \
@@ -165,7 +168,10 @@ cat $TMP_VCF \
     --warning_file STDERR \
 | python $CADD/src/scripts/annotateVEPvcf.py -c $REFERENCE_CONFIG \
 | gzip -c > $TMP_ANNO
-rm $TMP_VCF
+if [ ! "$CADD_KEEP_TMPFILES" = true ]
+then
+    rm $TMP_VCF
+fi
 
 # Imputation
 zcat $TMP_ANNO \
@@ -178,8 +184,11 @@ python $CADD/src/scripts/predictSKmodel.py \
 | python $CADD/src/scripts/max_line_hierarchy.py --all \
 | python $CADD/src/scripts/appendPHREDscore.py -t $CONVERSION_TABLE \
 | gzip -c > $TMP_NOV;
-rm $TMP_ANNO
-rm $TMP_IMP
+if [ ! "$CADD_KEEP_TMPFILES" = true ]
+then
+    rm $TMP_ANNO
+    rm $TMP_IMP
+fi
 
 if [ "$ANNOTATION" = 'false' ]
 then
@@ -199,8 +208,11 @@ fi
     head -n 1 < <(zcat $TMP_NOV);
     zcat $TMP_PRE $TMP_NOV | grep -v "^#" | sort -k1,1 -k2,2n -k3,3 -k4,4 || true;
 } | bgzip -c > $OUTFILE;
-rm $TMP_NOV
-rm $TMP_PRE
+if [ ! "$CADD_KEEP_TMPFILES" = true ]
+then
+    rm $TMP_NOV
+    rm $TMP_PRE
+fi
 
 OUTFILE=$(echo $OUTFILE |  sed 's/^\.\///')
 echo -e "\nCADD scored variants written to file: $OUTFILE"
